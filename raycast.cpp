@@ -78,8 +78,22 @@ class light{
                     fscanf(scene ," %f %f %f ", &ns, &ns, &ns);
                 }
             }while(strcmp(buffer,";")!=0);
+        }
 
-    }
+        //method: calculate_light
+        float calculate_light(){
+            //spotlight
+            if(theta!=0){
+            
+            }
+            else if(theta!=0){
+
+            }
+            //point-light logic 
+            else{
+
+            }
+        }
 
 };
 
@@ -326,6 +340,16 @@ void find_current_Ray(int current_w, int current_h, float pix_width, float pix_h
     v3_normalize(current_ray->direction, current_ray->direction);
 }
 
+//function:Calculate color
+//input: object, light information, and pixmap
+//output: altered pixmap 
+void calculate_color(object* current_object, list<light*>* light_information, uint8_t* pixmap)
+{
+    for (light* current_light : *light_information) {
+
+    }
+}
+
 //function: ppm_write 
 void ppm_write(char *filename, uint8_t **pixmap, int height, int width, int max_colors)
 {
@@ -394,12 +418,9 @@ int main (int argc, char* argv[]){
                     lowest_t=current_t;
                     //DEBUG: chheck intersection
                     //printf("intersection found at (%d %d)\n", h, w);
+                    //func: calculate_color 
+                    calculate_color(target_object, light_information, pixmap);
                 }
-            }
-            //ver2: loop through light sources to get object 
-            for(light* current_light : *light_information){
-                //pull light 
-                
             }
             //set color in pixmap 
             int pixel_index=(h*image_info.width+w)*3; 
@@ -435,4 +456,6 @@ int main (int argc, char* argv[]){
     delete current_camera;
     delete current_ray; 
     delete []pixmap;
+
+    return 1; 
 }
