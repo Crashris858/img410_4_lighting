@@ -9,6 +9,7 @@
 using namespace std;
 
 //classes:
+
 struct camera{
     float width=0;
     float height=0;
@@ -26,10 +27,67 @@ struct ray{
     float origin[3]={0,0,0};
 };
 
+//ver2: added light class 
+class light{
+    public: 
+        //atrributes
+        float position[3]={0,0,0};
+        float color[3]={0,0,0};
+        float radial_a0=0;
+        float radial_a1=0;
+        float radial_a2=0;
+        //determies spotlight
+        float theta=0; 
+        float angular_a0=0; 
+        //determines pointlight 
+        float direction[3]={0,0,0};
+        float ns = 20; 
+
+        //methods 
+        void find_data( FILE* scene){
+            //find data for the spehre 
+            char buffer[50];
+            do{
+                fscanf(scene, "%s ", buffer);
+                //color 
+                if(strcmp(buffer,"position:")==0){
+                    fscanf(scene ," %f %f %f ", &position[0], &position[1], &position[2]);
+                }
+                else if(strcmp(buffer,"color:")==0){
+                    fscanf(scene ," %f %f %f ", &color[0], &color[1], &color[2]);
+                }
+                else if(strcmp(buffer, "radial_a0:")==0){
+                    fscanf(scene, " %f ", &radial_a0);
+                }
+                else if(strcmp(buffer, "radial_a1:")==0){
+                    fscanf(scene, " %f ", &radial_a1);
+                }
+                else if(strcmp(buffer, "radial_a2:")==0){
+                    fscanf(scene, " %f ", &radial_a2);
+                }
+                else if(strcmp(buffer, "theta:")==0){
+                    fscanf(scene, " %f ", &theta);
+                }
+                else if(strcmp(buffer, "angular_a0:")==0){
+                    fscanf(scene, " %f ", &angular_a0);
+                }
+                else if(strcmp(buffer,"direction:")==0){
+                    fscanf(scene ," %f %f %f ", &direction[0], &direction[1], &direction[2]);
+                }
+                else if(strcmp(buffer,"ns:")==0){
+                    fscanf(scene ," %f %f %f ", &ns, &ns, &ns);
+                }
+            }while(strcmp(buffer,";")!=0);
+
+    }
+
+};
+
 class object{
     public: 
         //attributes
         float c_diff[3]={0,0,0};
+        float c_spec[3]={0,0,0};
         float position[3]={0,0,0}; 
         
 
@@ -116,6 +174,9 @@ class sphere: public object{
                 else if(strcmp(buffer,"position:")==0){
                     fscanf(scene ," %f %f %f ", &position[0], &position[1], &position[2]);
                 }
+                else if(strcmp(buffer,"c_spec:")==0){
+                    fscanf(scene ," %f %f %f ", &c_spec[0], &c_spec[1], &c_spec[2]);
+                }
                 else if(strcmp(buffer, "radius:")==0){
                     fscanf(scene, " %f ", &radius);
                 }
@@ -167,6 +228,9 @@ class plane: public object{
                 if(strcmp(buffer,"c_diff:")==0){
                     fscanf(scene ," %f %f %f ", &c_diff[0], &c_diff[1], &c_diff[2]);
                 }
+                else if(strcmp(buffer,"c_spec:")==0){
+                    fscanf(scene ," %f %f %f ", &c_spec[0], &c_spec[1], &c_spec[2]);
+                }
                 else if(strcmp(buffer,"position:")==0){
                     fscanf(scene ," %f %f %f ", &position[0], &position[1], &position[2]);
                 }
@@ -186,7 +250,8 @@ class plane: public object{
 //func: read scene
 //input: pointer to object array
 //output: fills the aray with scene data 
-void read_scene(list<object*>* scene_information, const char* filename, camera* current_camera){
+void read_scene(list<object*>* scene_information, list<light*>* light_information, 
+    const char* filename, camera* current_camera){
     //open file 
     FILE* scene = fopen(filename, "r");
     assert(scene!=NULL);
@@ -230,7 +295,12 @@ void read_scene(list<object*>* scene_information, const char* filename, camera* 
             current_sphere->find_data(scene);
             scene_information->push_front(current_sphere);
         }
-
+        //light 
+        else if(strcmp(buffer,"light")==0){
+            light* current_light = new light; 
+            current_light->find_data(scene);
+            light_information->push_front(current_light);
+        }
         //DEBUG:
         //printf("One object");
     }
@@ -294,9 +364,10 @@ int main (int argc, char* argv[]){
     uint8_t *pixmap = new uint8_t[size];
     camera *current_camera = new camera;
     list<object*> *scene_information = new list<object*>;
+    list<light*> *light_information = new list<light*>;
 
     //func: read scene
-    read_scene(scene_information,argv[3],current_camera);
+    read_scene(scene_information,light_information, argv[3],current_camera);
     printf("file read! \n");
     assert(current_camera!=NULL);
     float pix_height= current_camera->height/image_info.height; 
@@ -325,6 +396,11 @@ int main (int argc, char* argv[]){
                     //printf("intersection found at (%d %d)\n", h, w);
                 }
             }
+            //ver2: loop through light sources to get object 
+            for(light* current_light : *light_information){
+                //pull light 
+                
+            }
             //set color in pixmap 
             int pixel_index=(h*image_info.width+w)*3; 
             
@@ -351,6 +427,10 @@ int main (int argc, char* argv[]){
         delete obj;
     }
     scene_information->clear(); 
+    for (light* obj : *light_information) {
+        delete obj;
+    }
+    light_information->clear(); 
     delete scene_information;
     delete current_camera;
     delete current_ray; 
