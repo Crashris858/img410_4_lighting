@@ -121,7 +121,7 @@ class object{
         virtual void find_data( FILE* filename){
             return; 
         }
-        virtual void get_normal( ){
+        virtual void get_normal(float* new_normal, float* intersection_point){
             return; 
         }
         //destructor: used for proper deallocation of virtual functions
@@ -209,9 +209,9 @@ class sphere: public object{
             }while(strcmp(buffer,";")!=0);
 
         }
-        //
-        virtual get_normal(float* normal, )override{
-             
+    
+        void get_normal(float* new_normal, float* intersection_point)override{
+             v3_subtract(new_normal, intersection_point, position);
         }
 };
 
@@ -272,6 +272,12 @@ class plane: public object{
             //DEBUG:
             //printf("Plane: c_diff %f %f %f position: %f %f %f normal %f %f %f\n", 
             //  c_diff[0],c_diff[1],c_diff[2], position[0], position[1], position[2], normal[0], normal[1], normal[2]);
+        }
+
+        void get_normal(float* new_normal, float* intersection_point)override{
+             new_normal[0]=normal[0];
+             new_normal[1]=normal[1];
+             new_normal[2]=normal[2];
         }
 };
 
@@ -386,6 +392,7 @@ int main (int argc, char* argv[]){
         printf("Incorrect Number of Arguements");
         return 0; 
     }
+
     //cast image info 
     image image_info; 
     sscanf (argv[1],"%f",&image_info.width);
@@ -404,6 +411,7 @@ int main (int argc, char* argv[]){
     float pix_height= current_camera->height/image_info.height; 
     float pix_width= current_camera->width/image_info.width; 
     ray *current_ray = new ray; 
+
     //loop through pixels
     for(int h=0; h<image_info.height; h++){
         for(int w=0; w<image_info.width; w++){
@@ -429,28 +437,61 @@ int main (int argc, char* argv[]){
                 }
 
             }
+
             //pull object info
             float c_diff;
             float I[3]={0,0,0};
             float distance =0; 
-            current_ray->find_intersection_point(lowest_t,intersection_point);
+            current_ray->find_intersection_point(lowest_t, intersection_point);
+
+            // apply effects for each light in scene
             for(light* current_light : *light_information){
+
+                // construct ray from intersection to light
                 float L_vector[3];
-                v3_from_points(L_vector,intersection_point,current_light->position);
+                v3_from_points(L_vector, intersection_point, current_light->position);
                 distance = v3_length(L_vector);
-                for(object* current_object: *scene_information)
-                {
+
+                bool is_shadowed = false;
+
+                //find objects blocking the light 
+                for(object* current_object: *scene_information){
                     float t = current_object->find_intersection(current_light->position, current_light->direction);
-                    //I think this is checking if another object gets in the way, just cannot fully put it into head rn 
+                    // if the object is closer, current object is shadowed
                     if(distance>t){
-                        //set shadowed
+                        //set as shadowed
+                        is_shadowed = true;
                         break; 
                     }
-                    else{
-                        //calculate radial attenuation 
-                        //calcualte angular attenuation
-                        current_object->get_normal()
-                    }
+                }
+                
+                if(is_shadowed){
+                    continue;
+                }
+                else{
+                    //Light the scene
+
+                    // radial attenuation
+                    // angular attenuation
+
+                    //calculate light values 
+                    float normal[3]={0,0,0};
+                    target_object->get_normal(normal,intersection_point);
+                    float view_vector[3]=
+                        {-current_ray->direction[0],
+                         -current_ray->direction[1],
+                         -current_ray->direction[2]};
+                    float reflection[3] = {0,0,0};
+                    v3_reflect(reflection, L_vector, normal);
+
+                    // calculate diffusion
+                        //R
+                        //G
+                        //B
+                    // calculate specular
+                        //R
+                        //G
+                        //B
                 }
             }
             //set color in pixmap 
@@ -482,6 +523,7 @@ int main (int argc, char* argv[]){
     for (light* obj : *light_information) {
         delete obj;
     }
+
     light_information->clear(); 
     delete scene_information;
     delete current_camera;
