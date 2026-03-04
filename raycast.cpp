@@ -25,6 +25,13 @@ struct image{
 struct ray{
     float direction[3]={0,0,0};
     float origin[3]={0,0,0};
+
+    void find_intersection_point(float t, float* dst)
+    {
+        dst[0]=origin[0]+direction[0]*t;
+        dst[1]=origin[1]+direction[1]*t;
+        dst[2]=origin[2]+direction[2]*t;
+    }
 };
 
 //ver2: added light class 
@@ -114,6 +121,9 @@ class object{
         virtual void find_data( FILE* filename){
             return; 
         }
+        virtual void get_normal( ){
+            return; 
+        }
         //destructor: used for proper deallocation of virtual functions
         virtual ~object() {}
 };
@@ -147,6 +157,7 @@ class sphere: public object{
                     return -1.0f;
                 }
 
+
                 float t0 = (-B - sqrt(discriminate)) / 2.0f;
                 float t1 = (-B + sqrt(discriminate)) / 2.0f;
 
@@ -176,6 +187,7 @@ class sphere: public object{
                 return -1.0f;
         }
 
+
         void find_data( FILE* scene) override{
             //find data for the spehre 
             char buffer[50];
@@ -196,6 +208,10 @@ class sphere: public object{
                 }
             }while(strcmp(buffer,";")!=0);
 
+        }
+        //
+        virtual get_normal(float* normal, )override{
+             
         }
 };
 
@@ -340,15 +356,6 @@ void find_current_Ray(int current_w, int current_h, float pix_width, float pix_h
     v3_normalize(current_ray->direction, current_ray->direction);
 }
 
-//function:Calculate color
-//input: object, light information, and pixmap
-//output: altered pixmap 
-void calculate_color(object* current_object, list<light*>* light_information, uint8_t* pixmap)
-{
-    for (light* current_light : *light_information) {
-
-    }
-}
 
 //function: ppm_write 
 void ppm_write(char *filename, uint8_t **pixmap, int height, int width, int max_colors)
@@ -402,6 +409,7 @@ int main (int argc, char* argv[]){
         for(int w=0; w<image_info.width; w++){
             
             object *target_object = NULL;
+            float intersection_point[3]={0,0,0};
             float lowest_t = INFINITY;
             //func: findRay 
             find_current_Ray(w, h,pix_width, pix_height, *current_camera, image_info, current_ray);
@@ -418,8 +426,31 @@ int main (int argc, char* argv[]){
                     lowest_t=current_t;
                     //DEBUG: chheck intersection
                     //printf("intersection found at (%d %d)\n", h, w);
-                    //func: calculate_color 
-                    calculate_color(target_object, light_information, pixmap);
+                }
+
+            }
+            //pull object info
+            float c_diff;
+            float I[3]={0,0,0};
+            float distance =0; 
+            current_ray->find_intersection_point(lowest_t,intersection_point);
+            for(light* current_light : *light_information){
+                float L_vector[3];
+                v3_from_points(L_vector,intersection_point,current_light->position);
+                distance = v3_length(L_vector);
+                for(object* current_object: *scene_information)
+                {
+                    float t = current_object->find_intersection(current_light->position, current_light->direction);
+                    //I think this is checking if another object gets in the way, just cannot fully put it into head rn 
+                    if(distance>t){
+                        //set shadowed
+                        break; 
+                    }
+                    else{
+                        //calculate radial attenuation 
+                        //calcualte angular attenuation
+                        current_object->get_normal()
+                    }
                 }
             }
             //set color in pixmap 
