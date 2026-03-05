@@ -1,5 +1,5 @@
 # Illumination
-Raycasts mathematical primitives based on a scene input file into a pixel buffer. In addition, it illuminates the scene through the addition of the new object type, light, in the scene input file. Then, it combines these color values and writes the pixel buffer to a PPM formatted file.
+Raycasts mathematical primitives based on a scene input file into a pixel buffer. In addition, it illuminates the scene through the addition of the new object type, light, in the scene input file. Then, it combines these color values and writes the pixel buffer to a PPM formatted file to render a basic scene with lighting.
 
 ## Authors
 Carson Shah (email: cas2343@nau.edu)
