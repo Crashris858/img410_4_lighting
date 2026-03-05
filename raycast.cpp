@@ -263,6 +263,7 @@ class plane: public object{
              new_normal[0]=normal[0];
              new_normal[1]=normal[1];
              new_normal[2]=normal[2];
+             v3_normalize(new_normal, new_normal);
         }
 };
 
@@ -426,6 +427,13 @@ int main (int argc, char* argv[]){
             //pull object info
                 float I[3]={0,0,0};
                 float distance =0; 
+                float intersection_normal[3]={0,0,0};
+                target_object->get_normal(intersection_normal,intersection_point);
+                float shadow_origin[3] = {
+                intersection_point[0] + intersection_normal[0] * 0.0001f,
+                intersection_point[1] + intersection_normal[1] * 0.0001f,
+                intersection_point[2] + intersection_normal[2] * 0.0001f
+                };
                 current_ray->find_intersection_point(lowest_t, intersection_point);
 
                 // apply effects for each light in scene
@@ -433,20 +441,26 @@ int main (int argc, char* argv[]){
 
                     // construct ray from intersection to light
                     float L_vector[3];
-                    v3_from_points(L_vector, intersection_point, current_light->position);
+                    v3_from_points(L_vector, shadow_origin, current_light->position);
                     distance = v3_length(L_vector);
+                    v3_normalize(L_vector, L_vector);
 
-                    
 
                     bool is_shadowed = false;
 
+        
                     //find objects blocking the light 
                     for(object* current_object: *scene_information){
-                        float t = current_object->find_intersection(current_light->position, current_light->direction);
+                        if(current_object==target_object){
+                            continue; 
+                        }
+                        float t = current_object->find_intersection(intersection_point, L_vector);
                         // if the object is closer, current object is shadowed
-                        if(t < distance){
+                        if(t < distance&& t>0.00001f){
                             //set as shadowed
                             is_shadowed = true;
+                            //DEBUG
+                            //printf("DEBUG: is shadowed\n");
                             break; 
                         }
                     }
@@ -457,7 +471,7 @@ int main (int argc, char* argv[]){
                     }
                     else{
                         //Light the scene
-                        printf("DEBUG: LIGHTING Started");
+                        //printf("DEBUG: LIGHTING Started");
                         // radial attenuation
                         float f_rad = 1.0f;
 
@@ -505,8 +519,14 @@ int main (int argc, char* argv[]){
                             -current_ray->direction[1],
                             -current_ray->direction[2]};
 
+                        float L_in[3] = {
+                            -L_vector[0],
+                            -L_vector[1],
+                            -L_vector[2]
+                        };a
+
                         float reflection[3] = {0,0,0};
-                        v3_reflect(reflection, L_vector, normal);
+                        v3_reflect(reflection, L_in, normal);
                         
                         float normal_dot_ray = v3_dot_product(normal, L_vector);
                         float view_dot_reflection = v3_dot_product(view_vector, reflection);
