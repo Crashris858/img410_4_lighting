@@ -197,6 +197,7 @@ class sphere: public object{
     
         void get_normal(float* new_normal, float* intersection_point)override{
              v3_subtract(new_normal, intersection_point, position);
+             v3_normalize(new_normal, new_normal);
         }
 };
 
@@ -441,7 +442,7 @@ int main (int argc, char* argv[]){
 
                     // construct ray from intersection to light
                     float L_vector[3];
-                    v3_from_points(L_vector, shadow_origin, current_light->position);
+                    v3_from_points(L_vector, intersection_point, current_light->position);
                     distance = v3_length(L_vector);
                     v3_normalize(L_vector, L_vector);
 
@@ -454,7 +455,7 @@ int main (int argc, char* argv[]){
                         if(current_object==target_object){
                             continue; 
                         }
-                        float t = current_object->find_intersection(intersection_point, L_vector);
+                        float t = current_object->find_intersection(shadow_origin, L_vector);
                         // if the object is closer, current object is shadowed
                         if(t < distance&& t>0.00001f){
                             //set as shadowed
@@ -523,7 +524,7 @@ int main (int argc, char* argv[]){
                             -L_vector[0],
                             -L_vector[1],
                             -L_vector[2]
-                        };a
+                        };
 
                         float reflection[3] = {0,0,0};
                         v3_reflect(reflection, L_in, normal);
