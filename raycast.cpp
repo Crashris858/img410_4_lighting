@@ -506,9 +506,9 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
 
 }
 
-//function: rayCast(recursive)
-//input:
-//output:
+//function: Shade(recursive)
+//input: current ray, scene information, light information, color, and level 
+//output: final color 
 void Shade( ray *current_ray,list<object*> *scene_information, 
     list<light*> *light_information, float* Color, int level){
     //base case: hits max cases 
@@ -531,22 +531,32 @@ void Shade( ray *current_ray,list<object*> *scene_information,
             }
         }
         if(target_object!=NULL){
-            //func: calculateLight 
             //find reflection ray
             ray reflection;
-            float normal[3]={0,0,0}; 
-            target_object->get_normal(normal, current_ray->origin);
-            v3_reflect(reflection.direction, current_ray->direction, normal);
+            float normal[3]={0,0,0};
             current_ray->find_intersection_point(lowest_t ,reflection.origin);
+            target_object->get_normal(normal, reflection.origin);
+            
+            //offset reflection origin
+            reflection.origin[0]+= normal[0] *0.0001f;
+            reflection.origin[1]+= normal[1] *0.0001f;
+            reflection.origin[2]+= normal[2] *0.0001f;
+
+            //get reflection direction 
+            v3_reflect(reflection.direction, current_ray->direction, normal);
 
             //find current ray's color
-            Shade(&reflection, scene_information,light_information,Color,level+1);
+            float reflectContribution[3]={0,0,0};
+            //get reflection contribution 
+            Shade(&reflection,scene_information,light_information,reflectContribution,level+1);
+            //func: calculateLight 
             Calculate_Light(target_object, current_ray, lowest_t, scene_information, light_information, Color);
-            Color[0]*=target_object->reflection;
-            Color[1]*=target_object->reflection;
-            Color[2]*=target_object->reflection;
+
+            //assing color (add reflection contribution and currnt color)
+            Color[0]=Color[0]*(1-target_object->reflection)+reflectContribution[0]*target_object->reflection;
+            Color[1]=Color[1]*(1-target_object->reflection)+reflectContribution[1]*target_object->reflection;
+            Color[2]=Color[2]*(1-target_object->reflection)+reflectContribution[2]*target_object->reflection;
         }
-        Calculate_Light(target_object, current_ray, lowest_t, scene_information, light_information, Color);
         return;
         //chat, recurse this guy
     }
