@@ -11,7 +11,7 @@ Render a ppm file from a scene file using the syntax:
  
  "raycast width height input.scene output.ppm"
 
-Or use our make file using the Ssyntax: 
+Or use our make file using the syntax: 
 
  "make" and then "make run" 
 
