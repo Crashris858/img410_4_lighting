@@ -122,7 +122,7 @@ class sphere: public object{
 
         //methods
         float find_intersection(float *ro, float *rd)override{
-                // make sure rd is normalized so A is 1
+                // Note: rd is normalized so A is 1
 
                 // calculate B and C variables
                 float B = 2.0f * ( 
