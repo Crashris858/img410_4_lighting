@@ -7,13 +7,13 @@ Carson Shah (email: cas2343@nau.edu)
 Maya Harvey (email: mah992@nau.edu)
 
 ## Usage
-Render a ppm file from a scene file Using syntax:
+Render a ppm file from a scene file using the syntax:
  
  "raycast width height input.scene output.ppm"
 
-Or use our make file using syntax: 
+Or use our make file using the Ssyntax: 
 
  "make" and then "make run" 
 
 ## Known Issues
-Ray casting is currently working with given file format and multiple shapes. Illumination and reflection are working as shown in assignment's example photo.
+Ray casting is currently working with given file format and multiple shapes. Illumination and reflection are working as shown in the assignment's example photo.
