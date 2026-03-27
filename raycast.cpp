@@ -41,36 +41,22 @@ void ppm_write(char *filename, uint8_t **pixmap, int height, int width, int max_
 }
 
 //reads comments in ppm file 
-void eat_comments(FILE *f)
-{
-    int c = fgetc(f);
-
-    // keep reading until we find a non-whitespace, non-comment character
-    while (c != EOF) 
-    {
-        // skip all whitespace
-        while (c == ' ' || c == '\t' || c == '\n' || c == '\r') 
-        {
-            c = fgetc(f);
-        }
-
-        // if it's a comment line, skip the whole line
-        if (c == '#') 
-        {
-
-            while (c != '\n' && c != EOF) 
-            {
-                c = fgetc(f);
-            }
-            // after skipping the line, read the next character
-            c = fgetc(f);
-        } 
-        else 
-        {
-            // current character is valid data, put it back and stop
-            c = EOF;
-        }
+//read comment: reads comments and lingering characters 
+int readComment(FILE* filename){
+    int c = fgetc(filename);
+    //if comment
+    if(c == '#'){
+        //skip
+        while((c = fgetc(filename)) != '\n' && c != EOF);
+        return 1;
     }
+    //if newline
+    if(c == '\n'){
+        return 1;
+    }
+    //else not comment 
+    ungetc(c, filename);
+    return 0; 
 }
 
 class texture{ 
@@ -95,51 +81,36 @@ void ppm_read(char *filename, uint8_t **pixmap, texture *CurrentTexture)
     char filetype[3]; 
     FILE *ppmData = fopen(filename, "r");
     //check if filename is correct 
-    printf("DEBUG: reading texture %s\n", filename);
     assert(ppmData!=NULL);
     //read metadata
     fscanf(ppmData ,"%s", filetype);
     assert(strcmp(filetype,"P3")==0);
-    // Open input File
-    FILE * PPM_image;
-    PPM_image = fopen(filename, "rb");
-    assert(PPM_image != NULL);
-
-    // // Ensure PPM is P3
-    // char magic[3];
-    // if(fscanf(PPM_image, "%2s", magic) != 1 || strcmp(magic, "P3") != 0)
-    // {
-    //     fprintf(stderr, "Error: unsupported file format (expected P3)\n");
-    //     fclose(PPM_image);
-    //     exit(EXIT_FAILURE);
-    // }
 
     // rid of comments
-    eat_comments(PPM_image);
-
+    while (readComment(ppmData)); ;
     // get width
-    if (fscanf(PPM_image, "%d %d", &CurrentTexture->width, &CurrentTexture->height) != 2) 
+    if (fscanf(ppmData, "%d %d", &CurrentTexture->width, &CurrentTexture->height) != 2) 
     {
         fprintf(stderr, "Error: invalid image size\n");
-        fclose(PPM_image);
+        fclose(ppmData);
         exit(EXIT_FAILURE);
     }
-
+    while(readComment(ppmData));
     // get max color opacity
-    if (fscanf(PPM_image, "%d", &CurrentTexture->max_colors) != 1 || CurrentTexture->max_colors != 255) 
+    if (fscanf(ppmData, "%d", &CurrentTexture->max_colors) != 1 || CurrentTexture->max_colors != 255) 
     {
         fprintf(stderr, "Error: invalid max color value\n");
-        fclose(PPM_image);
+        fclose(ppmData);
         exit(EXIT_FAILURE);
     }
-
+    while(readComment(ppmData));
     // allocate memory for the pixmap to copy data to
     size_t size = CurrentTexture->width * CurrentTexture->height * 3;
     *pixmap = new uint8_t[size];
     if (!*pixmap) 
     {
         fprintf(stderr, "Error: memory allocation failed\n");
-        fclose(PPM_image);
+        fclose(ppmData);
         exit(EXIT_FAILURE);
     }
 
@@ -151,11 +122,11 @@ void ppm_read(char *filename, uint8_t **pixmap, texture *CurrentTexture)
     {
         for (int j = 0; j < CurrentTexture->width; j++) 
         {
-            if (fscanf(PPM_image, "%d %d %d", &r, &g, &b) != 3) 
+            if (fscanf(ppmData, "%d %d %d", &r, &g, &b) != 3) 
             {
                 fprintf(stderr, "Error: invalid pixel data\n");
                 delete[] *pixmap;
-                fclose(PPM_image);
+                fclose(ppmData);
                 exit(EXIT_FAILURE);
             }
 
@@ -167,7 +138,7 @@ void ppm_read(char *filename, uint8_t **pixmap, texture *CurrentTexture)
     }
 
     // close the file
-    fclose(PPM_image);
+    fclose(ppmData);
 }
 
 
@@ -375,7 +346,7 @@ class sphere: public object{
                     fscanf(scene, " %f ", &reflection);
                 }
                 else if(strcmp(buffer, "texture:")==0){
-                    fscanf(scene, " \"%s\" ", textureName);
+                    fscanf(scene, " \"%[^\"]\"  ", textureName);
                     //allocate memory for texture data 
                     objectTexture = new texture;
                     //read 
@@ -680,8 +651,8 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                     //assign i_diff
                     for(int c = 0; c < 3; c++){
                         //find scale coord and loop 
-                        int u = (int)(uv[0]*target_object->objectTexture->width)%target_object->objectTexture->width;
-                        int v = 1-(int)(uv[1]*target_object->objectTexture->height)%target_object->objectTexture->height;
+                        int u = (int)(uv[0]*(target_object->objectTexture->width-1));
+                        int v = (int)(1.0-uv[1])*(target_object->objectTexture->height-1);
                         //get index
                         int index=(v*target_object->objectTexture->width+u)*3+c;
 
