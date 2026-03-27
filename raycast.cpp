@@ -24,6 +24,14 @@ struct image{
     float height=0;
 };
 
+class texture{ 
+    //texture pixmap 
+        //ppmread
+        //to keep it simple, have one memory allocation
+        //deallocate at end of function
+    //get color 
+};
+
 struct ray{
     float direction[3]={0,0,0};
     float origin[3]={0,0,0};
