@@ -111,6 +111,11 @@ class object{
         virtual void get_normal(float* new_normal, float* intersection_point){
             return; 
         }
+
+        virtual void get_uv(float* point, float* center, float* uv){
+            uv[0] = 0;
+            uv[1] = 0;
+        }
         //destructor: used for proper deallocation of virtual functions
         virtual ~object() {}
 };
@@ -205,7 +210,7 @@ class sphere: public object{
              v3_normalize(new_normal, new_normal);
         }
 
-        void get_uv(float* point, float* center, float* uv){
+        void get_uv(float* point, float* center, float* uv) override{
             float D[3];
             v3_subtract(D, point, center);
             v3_normalize(D, D);
