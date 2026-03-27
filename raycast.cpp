@@ -2,13 +2,145 @@
 
 //libraries: 
 #include "v3math.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cstdint>
+#include <cassert>
 #include <list>
-#include <string.h>
-#include <stdint.h>
+
 #define PLANEDISTANCEZ -1
 #define PI 3.141592
 #define MAXLEVEL 7 
 using namespace std;
+
+//ppm functions: 
+
+
+//function: ppm_write 
+void ppm_write(char *filename, uint8_t **pixmap, int height, int width, int max_colors)
+{
+    FILE *out = fopen(filename, "wb");
+    if (!out) {
+        fprintf(stderr, "Error: cannot open output file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(out, "P3\n");
+    fprintf(out, "%d %d\n", width, height);
+    fprintf(out, "%d\n", max_colors);
+
+    int total = width * height * 3;
+    for (int i = 0; i < total; i++) {
+        fprintf(out, "%d ", (*pixmap)[i]);
+        if ((i + 1) % 9 == 0) fprintf(out, "\n"); // nice formatting
+    }
+
+    fclose(out);
+}
+
+//reads comments in ppm file 
+//read comment: reads comments and lingering characters 
+int readComment(FILE* filename){
+    int c = fgetc(filename);
+    //if comment
+    if(c == '#'){
+        //skip
+        while((c = fgetc(filename)) != '\n' && c != EOF);
+        return 1;
+    }
+    //if newline
+    if(c == '\n'){
+        return 1;
+    }
+    //else not comment 
+    ungetc(c, filename);
+    return 0; 
+}
+
+class texture{ 
+    public: 
+        int width=0;
+        int height=0;
+        int max_colors=0;
+        uint8_t *pixmap = NULL;
+
+    
+    
+    //destructor 
+    ~texture(){
+        delete []pixmap;
+    }
+
+};
+
+//reads ppm file and stores data in a pixmap 
+void ppm_read(char *filename, uint8_t **pixmap, texture *CurrentTexture)
+{
+    char filetype[3]; 
+    FILE *ppmData = fopen(filename, "r");
+    //check if filename is correct 
+    assert(ppmData!=NULL);
+    //read metadata
+    fscanf(ppmData ,"%s", filetype);
+    assert(strcmp(filetype,"P3")==0);
+
+    // rid of comments
+    while (readComment(ppmData)); ;
+    // get width
+    if (fscanf(ppmData, "%d %d", &CurrentTexture->width, &CurrentTexture->height) != 2) 
+    {
+        fprintf(stderr, "Error: invalid image size\n");
+        fclose(ppmData);
+        exit(EXIT_FAILURE);
+    }
+    while(readComment(ppmData));
+    // get max color opacity
+    if (fscanf(ppmData, "%d", &CurrentTexture->max_colors) != 1 || CurrentTexture->max_colors != 255) 
+    {
+        fprintf(stderr, "Error: invalid max color value\n");
+        fclose(ppmData);
+        exit(EXIT_FAILURE);
+    }
+    while(readComment(ppmData));
+    // allocate memory for the pixmap to copy data to
+    size_t size = CurrentTexture->width * CurrentTexture->height * 3;
+    *pixmap = new uint8_t[size];
+    if (!*pixmap) 
+    {
+        fprintf(stderr, "Error: memory allocation failed\n");
+        fclose(ppmData);
+        exit(EXIT_FAILURE);
+    }
+
+    // variables for reading, each pixel has r, g, b values
+    int r, g, b;
+
+    //loop through rows and columns to image data
+    for (int i = 0; i < CurrentTexture->height; i++) 
+    {
+        for (int j = 0; j < CurrentTexture->width; j++) 
+        {
+            if (fscanf(ppmData, "%d %d %d", &r, &g, &b) != 3) 
+            {
+                fprintf(stderr, "Error: invalid pixel data\n");
+                delete[] *pixmap;
+                fclose(ppmData);
+                exit(EXIT_FAILURE);
+            }
+
+            int index = (i * CurrentTexture->width + j) * 3;
+            (*pixmap)[index]     = (uint8_t) r;
+            (*pixmap)[index + 1] = (uint8_t) g;
+            (*pixmap)[index + 2] = (uint8_t) b;
+        }
+    }
+
+    // close the file
+    fclose(ppmData);
+}
+
 
 //classes:
 
@@ -23,6 +155,7 @@ struct image{
     float width=0;
     float height=0;
 };
+
 
 struct ray{
     float direction[3]={0,0,0};
@@ -88,6 +221,10 @@ class light{
                 }
             }while(strcmp(buffer,";")!=0);
         }
+
+        //destructor 
+        ~light(){
+        }
 };
 
 class object{
@@ -97,6 +234,8 @@ class object{
         float c_spec[3]={0,0,0};
         float position[3]={0,0,0}; 
         float reflection =0.0; 
+        char textureName[64]={0};
+        texture* objectTexture = NULL;
         
 
 
@@ -117,7 +256,12 @@ class object{
             uv[1] = 0;
         }
         //destructor: used for proper deallocation of virtual functions
-        virtual ~object() {}
+        virtual ~object() {
+            //deallocate texture if possible 
+            if(objectTexture != NULL){
+                delete objectTexture;
+            }
+        }
 };
 
 class sphere: public object{
@@ -201,6 +345,13 @@ class sphere: public object{
                 else if(strcmp(buffer, "reflection:")==0){
                     fscanf(scene, " %f ", &reflection);
                 }
+                else if(strcmp(buffer, "texture:")==0){
+                    fscanf(scene, " \"%[^\"]\"  ", textureName);
+                    //allocate memory for texture data 
+                    objectTexture = new texture;
+                    //read 
+                    ppm_read(textureName, &objectTexture->pixmap, objectTexture);
+                } 
             }while(strcmp(buffer,";")!=0);
 
         }
@@ -491,11 +642,34 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
             float I_spec[3]={0,0,0};
 
             if(normal_dot_ray > 0){
-                // calculate diffusion for RGB
-                for(int c = 0; c < 3; c++){
-                    I_diff[c] += target_object->c_diff[c] *
-                            current_light->color[c] *
-                            normal_dot_ray;
+                //if texture, find texture coord 
+                if(target_object->objectTexture !=NULL)
+                {
+                    //get uv
+                    float uv[2];
+                    target_object->get_uv(intersection_point,target_object->position,uv);
+                    //assign i_diff
+                    for(int c = 0; c < 3; c++){
+                        //find scale coord and loop 
+                        int u = (int)(uv[0]*(target_object->objectTexture->width-1));
+                        int v = (int)(1.0-uv[1])*(target_object->objectTexture->height-1);
+                        //get index
+                        int index=(v*target_object->objectTexture->width+u)*3+c;
+
+                        I_diff[c] += (target_object->objectTexture->pixmap[index] / 255.0f) *
+                        current_light->color[c] *
+                        normal_dot_ray;
+                    }   
+
+                }
+                //else use objects color 
+                else
+                {
+                    for(int c = 0; c < 3; c++){
+                        I_diff[c] += target_object->c_diff[c] *
+                        current_light->color[c] *
+                        normal_dot_ray;
+                    }   
                 }
             }
             if(view_dot_reflection > 0 && normal_dot_ray > 0)
@@ -580,30 +754,6 @@ void Shade( ray *current_ray,list<object*> *scene_information,
     }
 }
 
-
-//function: ppm_write 
-void ppm_write(char *filename, uint8_t **pixmap, int height, int width, int max_colors)
-{
-    FILE *out = fopen(filename, "wb");
-    if (!out) {
-        fprintf(stderr, "Error: cannot open output file %s\n", filename);
-        exit(EXIT_FAILURE);
-    }
-
-    fprintf(out, "P3\n");
-    fprintf(out, "%d %d\n", width, height);
-    fprintf(out, "%d\n", max_colors);
-
-    int total = width * height * 3;
-    for (int i = 0; i < total; i++) {
-        fprintf(out, "%d ", (*pixmap)[i]);
-        if ((i + 1) % 9 == 0) fprintf(out, "\n"); // nice formatting
-    }
-
-    fclose(out);
-}
-
-//function: find col 
 
 //main:
 int main (int argc, char* argv[]){
