@@ -1,5 +1,5 @@
-# Illumination and Raytracing
-Raycasts mathematical primitives based on a scene input file into a pixel buffer. In addition, it illuminates the scene through the addition of the new object type, light, in the scene input file. Then, it combines these color values and writes the pixel buffer to a PPM formatted file to render a basic scene with lighting. Finally, raytracing and reflections were implemented through recursion.
+# Illumination, Raytracing, and Texture
+Raycasts mathematical primitives based on a scene input file into a pixel buffer. In addition, it illuminates the scene through the addition of the new object type, light, in the scene input file. Then, it combines these color values and writes the pixel buffer to a PPM formatted file to render a basic scene with lighting. Finally, raytracing and reflections were implemented through recursion. Textures, if applicable and in ppm format, are applied to spheres through UV mapping. 
 
 ## Authors
 Carson Shah (email: cas2343@nau.edu)
@@ -16,4 +16,4 @@ Or use our make file using the syntax:
  "make" and then "make run" 
 
 ## Known Issues
-Ray casting is currently working with given file format and multiple shapes. Illumination and reflection are working as shown in the assignment's example photo.
+Ray casting is currently working with given file format and multiple shapes. Illumination and reflection are working as shown in the assignment's example photo. Texture can be applied to spheres.
