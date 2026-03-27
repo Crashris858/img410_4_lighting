@@ -204,6 +204,19 @@ class sphere: public object{
              v3_subtract(new_normal, intersection_point, position);
              v3_normalize(new_normal, new_normal);
         }
+
+        void get_uv(float* point, float* center, float* uv){
+            float D[3];
+            v3_subtract(D, point, center);
+            v3_normalize(D, D);
+
+            float phi = atan2(D[2], D[0]);
+            float theta = acos(D[1]);
+
+            uv[0] = phi / (2 * PI) + 0.5f;
+            uv[1] = theta / PI;
+        }
+
 };
 
 
