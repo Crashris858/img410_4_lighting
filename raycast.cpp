@@ -83,18 +83,19 @@ void ppm_read(char *filename, uint8_t **pixmap, texture *CurrentTexture)
     //check if filename is correct 
     assert(ppmData!=NULL);
     //read metadata
-    fscanf(ppmData ,"%s", filetype);
+    fscanf(ppmData ,"%s ", filetype);
     assert(strcmp(filetype,"P3")==0);
 
     // rid of comments
-    while (readComment(ppmData)); ;
-    // get width
+    while (readComment(ppmData)); 
+    // get widths
     if (fscanf(ppmData, "%d %d", &CurrentTexture->width, &CurrentTexture->height) != 2) 
     {
         fprintf(stderr, "Error: invalid image size\n");
         fclose(ppmData);
         exit(EXIT_FAILURE);
     }
+    fprintf(stderr, "Width: %d, Height: %d\n", CurrentTexture->width, CurrentTexture->height);
     while(readComment(ppmData));
     // get max color opacity
     if (fscanf(ppmData, "%d", &CurrentTexture->max_colors) != 1 || CurrentTexture->max_colors != 255) 
@@ -563,7 +564,7 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
             }
             float t = current_object->find_intersection(shadow_origin, L_vector);
             // if the object is closer, current object is shadowed
-            if(t < distance&& t>0.00001f){
+            if(t > 0.0001f && t < distance - 0.0001f){
                 //set as shadowed
                 is_shadowed = true;
                 //DEBUG
@@ -620,6 +621,7 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
             v3_normalize(L_vector, L_vector);
             float normal[3]={0,0,0};
             target_object->get_normal(normal,intersection_point);
+            
 
             float view_vector[3]=
                 {-current_ray->direction[0],
@@ -648,14 +650,13 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                     //get uv
                     float uv[2];
                     target_object->get_uv(intersection_point,target_object->position,uv);
+                    float u = (uv[0]*(target_object->objectTexture->width)-1);
+                    float v = (uv[1])*(target_object->objectTexture->height)-1;
+
                     //assign i_diff
                     for(int c = 0; c < 3; c++){
-                        //find scale coord and loop 
-                        int u = (int)(uv[0]*(target_object->objectTexture->width-1));
-                        int v = (int)(1.0-uv[1])*(target_object->objectTexture->height-1);
                         //get index
-                        int index=(v*target_object->objectTexture->width+u)*3+c;
-
+                        int index=((int)v*target_object->objectTexture->width+(int)u)*3+c;
                         I_diff[c] += (target_object->objectTexture->pixmap[index] / 255.0f) *
                         current_light->color[c] *
                         normal_dot_ray;
@@ -672,6 +673,7 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                     }   
                 }
             }
+            
             if(view_dot_reflection > 0 && normal_dot_ray > 0)
             {
                 // calculate specular for RGB
@@ -743,6 +745,7 @@ void Shade( ray *current_ray,list<object*> *scene_information,
             Shade(&reflection,scene_information,light_information,reflectContribution,level+1);
             //func: calculateLight 
             Calculate_Light(target_object, current_ray, lowest_t, scene_information, light_information, Color);
+            
 
             //assing color (add reflection contribution and currnt color)
             Color[0]=Color[0]*(1-target_object->reflection)+reflectContribution[0]*target_object->reflection;
