@@ -4,11 +4,11 @@ camera width: 2 height: 2;
 sphere c_diff: 0.3 0.5 0.3 c_spec: 1 1 1 position: 3 1 -4 radius: 2 cel-shaded: 1;
 sphere c_diff: 0.7 0.3 0.3 c_spec: 1 1 1 position: -3 1 -4 radius: 2 cel-shaded: 0 reflection: 0.5;
 
-plane c_diff: 1.0 1.0 1.0 position: 0 0 -5 normal: 0 0 1 cel-shaded: 0;   // back wall
-plane c_diff: 1.0 1.0 1.0 position: -5 0 0 normal: 1 0 0 cel-shaded: 0;  // left wall
-plane c_diff: 1.0 1.0 1.0 position: 5 0 0 normal: -1 0 0 cel-shaded: 0;  // right wall
-plane c_diff: 0.5 0.5 0.5 position: 0 -1 0 normal: 0 1 0 cel-shaded: 1;  // floor
+plane c_diff: 1.0 1.0 1.0 position: 0 0 -5 normal: 0 0 1 cel-shaded: 0;  
+plane c_diff: 1.0 1.0 1.0 position: -5 0 0 normal: 1 0 0 cel-shaded: 0;  
+plane c_diff: 1.0 1.0 1.0 position: 5 0 0 normal: -1 0 0 cel-shaded: 0;  
+plane c_diff: 0.5 0.5 0.5 position: 0 -1 0 normal: 0 1 0 cel-shaded: 0;  
 
-light color: 4 4 4 radial_a2: 0.125 radial_a1: 0.125 radial_a0: 0.125 position: 0 4 -2;
+light color: 4 4 4 radial_a2: 0.125 radial_a1: 0.125 radial_a0: 0.125 position: 0 4 0;
 
 end

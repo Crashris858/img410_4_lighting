@@ -14,9 +14,9 @@
 #define PI 3.141592
 #define MAXLEVEL 7 
 #define AMBIENTPERCENT 0.20
-#define OUTLINEMARGIN 0.2
-#define BORDEROUTLINE 5 
+#define BORDEROUTLINE 10 
 #define DISTANCEMARGIN 0.5
+#define SECTIONS 2
 using namespace std;
 
 //ppm functions: 
@@ -239,7 +239,7 @@ class object{
         float c_spec[3]={0,0,0};
         float position[3]={0,0,0}; 
         float reflection =0.0; 
-        int isCelShaded=false; 
+        int isCelShaded=0; 
         char textureName[64]={0};
         texture* objectTexture = NULL;
         
@@ -544,38 +544,33 @@ void find_current_Ray(int current_w, int current_h, float pix_width, float pix_h
 //function: ShadedGradient
 //Input:
 //output: degree of color 
-void cel_shade_gradient(float* object_diff,  int sections, float normal_dot_ray, float view_dot_normal
-                    ,float view_dot_reflection , light* current_light, 
-                    float* I_diff, float *I_ambient,float * I_spec, bool* is_outline){
+void cel_shade_gradient(object* object, int sections, float normal_dot_ray, float view_dot_reflection, 
+        light* current_light, float* I_diff, float * I_spec)
+{
         //get gradient boundaries 
         float boundary_seperation=1.0f/sections; 
-        float dot_step = ceil(normal_dot_ray/boundary_seperation)*boundary_seperation;
+        float dot_step = ceil(normal_dot_ray*sections)*boundary_seperation;
         for(int c=0; c<3; c++){
-            I_diff[c]= object_diff[c]*dot_step;
+            I_diff[c]= object->c_diff[c]*dot_step;
         }
         //calculate specular
         if(view_dot_reflection > 0.90f){
             // calculate specular 
-            float spec = pow(view_dot_reflection, current_light->ns);
-            if(spec>0.95){
                 for(int c = 0; c < 3; c++){
-                //strong white light, else defaults black
-                I_spec[c] = 1;
+                I_spec[c] = object->c_spec[c];
                 }
-            }
         }
 }
 
 //CalcualteLightCelShade 
 
 //logic: wanted to avoid further conditional mess in shade function
-void calculate_light_cel(object* target_object, light* current_light, float normal_dot_ray, float view_dot_normal,
-       float view_dot_reflection, float ns, 
-       float f_rad, float f_ang, float* I, float* I_diff, float I_ambient, float* I_spec, bool* is_outline)
+void calculate_light_cel(object* target_object, light* current_light, float normal_dot_ray,
+       float view_dot_reflection, float f_rad, float f_ang, float* I, float* I_diff, float* I_spec)
 {
     //handles three types of light
-    cel_shade_gradient(target_object->c_diff, 2, normal_dot_ray, view_dot_normal, view_dot_reflection,
-                        current_light, I_diff, &I_ambient, I_spec, &*is_outline);
+    cel_shade_gradient(target_object, SECTIONS, normal_dot_ray, view_dot_reflection,
+                        current_light, I_diff, I_spec);
     //full lighting calculation (excludes ambient since in cel-shade-gradient)
     I[0] += f_rad * f_ang * (I_spec[0] + I_diff[0]);
     I[1] += f_rad * f_ang * (I_spec[1] + I_diff[1]);
@@ -622,7 +617,7 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
         //find objects blocking the light 
         for(object* current_object: *scene_information){
             if(current_object==target_object){
-                same_object_shadow=(current_object==target_object);
+                same_object_shadow=true;
                 continue; 
             }
             float t = current_object->find_intersection(shadow_origin, L_vector);
@@ -639,6 +634,7 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
         }
         
         if(is_shadowed){
+            //added for differentaition if ambient light is applied
             if(cel_intercept)
             {
                 //apply black for cartoon look 
@@ -648,7 +644,7 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                 }
                 continue;
             }
-            else if(same_object_shadow)
+            else if(same_object_shadow && target_object->isCelShaded==1)
             {
                 for(int c=0; c<3; c++)
                 {
@@ -656,15 +652,18 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                 }
                 continue;
             }
-            else
-            {
-                //apply ambient lighting
-                for(int c=0; c<3; c++)
-                {
-                    I[c]=AMBIENTPERCENT;
-                }
-                continue; 
-            }
+            continue;
+
+            //this was an attempt at ambient for shadows, but we thought it odd 
+            // else
+            // {
+            //     //apply ambient lighting
+            //     for(int c=0; c<3; c++)
+            //     {
+            //         I[c]=AMBIENTPERCENT*target_object->c_diff[c];
+            //     }
+            //     continue; 
+            // }
 
         }
         else{
@@ -732,20 +731,17 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
             //get dot and reflection vector 
             float normal_dot_ray = v3_dot_product(normal, L_vector);
             float view_dot_reflection = v3_dot_product(view_vector, reflection);
-            float view_dot_normal = v3_dot_product(view_vector, normal);
             
             
             float I_diff[3]={0,0,0};
             float I_spec[3]={0,0,0};
-            float I_ambient=AMBIENTPERCENT; 
 
             //if cel-shaded logic
             if(target_object->isCelShaded==1 && normal_dot_ray>0){
                 //set depth to lowest t 
-                bool is_outline = false; 
                 //func: cel-shade
-                calculate_light_cel(target_object, current_light, normal_dot_ray, view_dot_normal,
-                view_dot_reflection, current_light->ns , f_rad, f_ang, I, I_diff, I_ambient, I_spec, &is_outline);
+                calculate_light_cel(target_object, current_light, normal_dot_ray,
+                view_dot_reflection, f_rad, f_ang, I, I_diff, I_spec);
                 //if outline set to black 
 
             }
@@ -770,8 +766,6 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                     }   
                     
 
-                    //book keep for outlining
-
                 }
                 //else use objects color 
                 else
@@ -781,9 +775,6 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                         current_light->color[c] *
                         normal_dot_ray;
                     }   
-
-                    //book keep for outlining 
-
                 }
                 if(view_dot_reflection > 0 && normal_dot_ray > 0)
                 {
@@ -798,9 +789,9 @@ void Calculate_Light(object* target_object, ray* current_ray, float lowest_t,
                     }
                 }
 
-                I[0] += f_rad * f_ang * (I_spec[0] + I_diff[0])+I_ambient;
-                I[1] += f_rad * f_ang * (I_spec[1] + I_diff[1])+I_ambient;
-                I[2] += f_rad * f_ang * (I_spec[2] + I_diff[2])+I_ambient;
+                I[0] += f_rad * f_ang * (I_spec[0] + I_diff[0]);
+                I[1] += f_rad * f_ang * (I_spec[1] + I_diff[1]);
+                I[2] += f_rad * f_ang * (I_spec[2] + I_diff[2]);
                 for(int c = 0; c < 3; c++){
                     if(I[c] > 1.0f) I[c] = 1.0f;
                     if(I[c] < 0.0f) I[c] = 0.0f;
@@ -840,6 +831,7 @@ void Shade( ray *current_ray,list<object*> *scene_information,
         //depth map logic 
         if(level==1)
         {
+            //only record sell shaded 
             if (target_object==NULL){
                 depth_map[pixel_index]=INFINITY; 
             }
@@ -847,15 +839,15 @@ void Shade( ray *current_ray,list<object*> *scene_information,
                 //index depth using h and w
                 depth_map[pixel_index]=lowest_t;
             }
+            //neagtive since distance will be identified later 
             else if(target_object->isCelShaded==0){
-                depth_map[pixel_index]=INFINITY;
+                depth_map[pixel_index]= -lowest_t;
             }
         }
 
         if(target_object!=NULL){
             //check for cel-object base case
-            if(target_object->isCelShaded==1)
-            {
+            if(target_object->isCelShaded==1){
                 // //set current cel to object color 
                 Color[0]=target_object->c_diff[0];
                 Color[1]=target_object->c_diff[1];
@@ -903,7 +895,7 @@ void depth_map_draw_outlines(float* depth_map, uint8_t* pixmap, int h, int w, im
     int depth_index=(h*image_info.width+w);
     int pixel_index=depth_index*3; 
     //check if outline viable object
-    if(depth_map[depth_index]==INFINITY) return;
+    if(depth_map[depth_index]==INFINITY||depth_map[depth_index]<0) return;
     int displacement=BORDEROUTLINE/2; 
     //check direction using border outline
     for(int k=0; k<BORDEROUTLINE; k++){
@@ -915,28 +907,30 @@ void depth_map_draw_outlines(float* depth_map, uint8_t* pixmap, int h, int w, im
             //edge case
             if(ni>image_info.height||ni<0||nj<0||nj>image_info.width) continue; 
             float current_neighbor=depth_map[temp];
-            // null
+            // null case 
             if(current_neighbor==INFINITY){
                 //make black 
-                for(int c = 0; c < 3; c++)
-                {
+                for(int c = 0; c < 3; c++){
                     pixmap[pixel_index + c] = 0;
                 }
             }
-            //else
-            else{
-                //check if distance between objects is too far 
-                if(fabs(depth_map[depth_index]-current_neighbor)>DISTANCEMARGIN){ 
-                    for(int c = 0; c < 3; c++)
-                    {
-                        pixmap[pixel_index + c] = 0;
-                    }
+            // printf("%f %f \n", current_neighbor, depth_map[depth_index]);
+            // conflicting object in front case 
+            if(fabs(current_neighbor)<fabs(depth_map[depth_index])) continue;
+            //phong case (must be behind) and cel-shade case 
+            else if(current_neighbor<0){
+                for(int c = 0; c < 3; c++){
+                    pixmap[pixel_index + c] = 0;
+                }
+            }
+            //cel-shade case 
+            else if(fabs(current_neighbor-depth_map[depth_index])>DISTANCEMARGIN){
+                for(int c = 0; c < 3; c++) {
+                    pixmap[pixel_index + c] = 0;
                 }
             }
         }
     }
-
-    
 }
 
 
