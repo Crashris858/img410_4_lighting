@@ -19,6 +19,7 @@ Or use our make file using the syntax:
 
 ## Cel-Shade Reference
 We needed to understand what exactly cel-shading should include. Therefore, we looked at the Wikipedia article for cel-shading. Although we did not follow the recommended process, we were able to figure out key points, and further references in media, that we could follow.  
+https://en.wikipedia.org/wiki/Cel_shading
 
 
 ## Known Issues
