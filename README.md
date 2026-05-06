@@ -17,5 +17,11 @@ Or use our make file using the syntax:
 
  "make" or "make run" 
 
+##Cel-Shade Reference
+We needed to understand what exactly cel-shading should include. Therefore, we looked at the Wikipedia article for cel-shading. Although we did not follow the recommended process, we were able to figure out key points, and further references in media, that we could follow.  
+
+
 ## Known Issues
 Ray casting is currently working with given file format and multiple shapes. Illumination and reflection are working as shown in the assignment's example photo. Texture can be applied to spheres. Cell shaded items are rendered cleanly along with a black outline
+
+Cel-shading outlines do not appear in the reflection. 
